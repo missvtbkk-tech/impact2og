@@ -173,27 +173,32 @@
                                     <div class="col-md-6"><label class="form-label">วันที่และเวลาเริ่มเกิดเหตุ <span class="text-danger">*</span></label><input type="text" name="startDateTime" id="inp-start-datetime" class="form-control bg-white" required></div>
                                     <div class="col-md-6"><label class="form-label">วันที่และเวลาสิ้นสุด</label><input type="text" name="endDateTime" id="inp-end-datetime" class="form-control bg-white"></div>
                                     
-                                    <div class="col-md-4"><label class="form-label">พื้นที่ก่อสร้าง (แหล่งกำเนิด)</label><select name="constructionArea" id="inp-construction-area" class="form-select"></select></div>
-                                    <div class="col-md-4"><label class="form-label">พื้นที่/โซนที่กระทบ</label><select name="area" id="inp-area" class="form-select"></select></div>
-                                    <div class="col-md-4"><label class="form-label">เลขห้อง / จำนวนห้อง</label><select name="roomNo" id="inp-room" class="form-select"></select></div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">พื้นที่ก่อสร้าง (แหล่งกำเนิด)</label>
+                                        <select name="constructionArea" id="inp-construction-area" class="form-select" onchange="checkAddNew(this, 'constructionAreas')"></select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">พื้นที่/โซนที่กระทบ</label>
+                                        <select name="area" id="inp-area" class="form-select" onchange="checkAddNew(this, 'areas')"></select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">เลขห้อง / จำนวนห้อง</label>
+                                        <select name="roomNo" id="inp-room" class="form-select" onchange="checkAddNew(this, 'rooms')"></select>
+                                    </div>
 
                                     <div class="col-md-8">
                                         <label class="form-label">ประเภทผลกระทบ</label>
-                                        <div id="impact-checks" class="bg-light p-3 rounded border d-flex flex-wrap gap-3"></div>
+                                        <div id="impact-checks" class="bg-light p-3 rounded border d-flex flex-wrap gap-3 align-items-center"></div>
                                     </div>
                                     <div class="col-md-4">
                                         <label class="form-label">ระดับความรุนแรง <span class="text-danger">*</span></label>
-                                        <select name="severity" id="inp-severity" class="form-select" required>
-                                            <option value="" disabled selected>เลือกระดับ (1-5)</option>
-                                            <option value="1">1 - แทบไม่รู้สึก</option>
-                                            <option value="2">2 - รบกวนเล็กน้อย</option>
-                                            <option value="3">3 - แขกร้องเรียน</option>
-                                            <option value="4">4 - กระทบหนัก/ขอย้ายห้อง</option>
-                                            <option value="5">5 - วิกฤต/ขอคืนเงิน</option>
-                                        </select>
+                                        <select name="severity" id="inp-severity" class="form-select" required onchange="checkAddNew(this, 'severities')"></select>
                                     </div>
 
-                                    <div class="col-md-6"><label class="form-label">ผลกระทบต่อแขก</label><select name="guestImpact" id="inp-guest" class="form-select"></select></div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">ผลกระทบต่อแขก</label>
+                                        <select name="guestImpact" id="inp-guest" class="form-select" onchange="checkAddNew(this, 'guestImpacts')"></select>
+                                    </div>
                                     <div class="col-md-6"><label class="form-label">การดำเนินการแก้ไขปัญหา</label><input type="text" name="action" id="inp-action" class="form-control"></div>
                                     <div class="col-12"><label class="form-label">คำอธิบายเพิ่มเติม</label><textarea name="details" id="inp-details" class="form-control" rows="2"></textarea></div>
 
@@ -272,11 +277,10 @@
     // ==========================================
     // API CONFIGURATION (สำหรับใช้งานบน GitHub Pages)
     // ==========================================
-    // กำหนด URL ของ Google Apps Script ของคุณโดยตรง
-    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxymkHuSzEIt9BJacs5CGw-DxbfZuZN4TaUdkpM0oSvLqDIr0gy4T4qn_LJxciYZFB9VQ/exec"; 
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzHoxDTJAHgFAvZJr4CzEXL71v14-19HxdULDeLnPYsC_40iawkKoAmrIIDTDCjFc4zeQ/exec"; 
 
     // ==========================================
-    // CORE API CALLER (เชื่อมต่อ Backend)
+    // CORE API CALLER
     // ==========================================
     async function callBackend(action, payload = {}) {
         try {
@@ -299,7 +303,7 @@
     // FRONTEND VARIABLES
     // ==========================================
     let allData = [];
-    let listData = { constructionAreas: ["โซนก่อสร้างหลัก"], areas: ["Lobby"], rooms: ["-"], impactTypes: ["เสียงดัง"], severities: ["1"], guestImpacts: ["ไม่มี"] };
+    let listData = { constructionAreas: ["โซนก่อสร้างหลัก"], areas: ["Lobby"], rooms: ["-"], impactTypes: ["เสียงดัง"], severities: ["1 - แทบไม่รู้สึก"], guestImpacts: ["ไม่มี"] };
     let tempListData = {}; 
     let uploadedMedia = [];
     let chartInstanceImpact = null, chartInstanceSeverity = null;
@@ -384,21 +388,80 @@
         }
     }
 
+    // ฟังก์ชันจัดการเพิ่มลิสต์ใหม่แบบ On-the-fly จากผู้ใช้ทั่วไป
+    function checkAddNew(selectEl, listCategory) {
+        if (selectEl.value === 'ADD_NEW') {
+            Swal.fire({
+                title: 'เพิ่มรายการใหม่',
+                input: 'text',
+                inputPlaceholder: 'พิมพ์รายการที่ต้องการเพิ่ม...',
+                showCancelButton: true,
+                confirmButtonText: 'เพิ่ม',
+                cancelButtonText: 'ยกเลิก'
+            }).then((result) => {
+                if (result.isConfirmed && result.value.trim() !== '') {
+                    const newValue = result.value.trim();
+                    if (!listData[listCategory].includes(newValue)) {
+                        listData[listCategory].push(newValue);
+                    }
+                    renderLists();
+                    selectEl.value = newValue; // ตั้งค่าตัวเลือกที่เพิ่งสร้างเป็น selected
+                } else {
+                    selectEl.value = ''; // ยกเลิกแล้วเคลียร์ช่อง
+                }
+            });
+        }
+    }
+
+    // ฟังก์ชันเพิ่มหัวข้อผลกระทบใหม่
+    function addNewImpactType() {
+        Swal.fire({
+            title: 'เพิ่มประเภทผลกระทบ',
+            input: 'text',
+            inputPlaceholder: 'เช่น เศษวัสดุตกหล่น',
+            showCancelButton: true,
+            confirmButtonText: 'เพิ่ม',
+            cancelButtonText: 'ยกเลิก'
+        }).then((result) => {
+            if (result.isConfirmed && result.value.trim() !== '') {
+                const newValue = result.value.trim();
+                if (!listData.impactTypes.includes(newValue)) {
+                    listData.impactTypes.push(newValue);
+                }
+                renderLists();
+                // ให้ติ๊กเลือกอันใหม่ที่เพิ่งเพิ่มให้อัตโนมัติ
+                setTimeout(() => {
+                    const cb = document.querySelector(`.impact-cb[value="${newValue}"]`);
+                    if(cb) cb.checked = true;
+                }, 100);
+            }
+        });
+    }
+
     function renderLists() {
-        const populate = (id, arr) => {
+        const populate = (id, arr, categoryKey) => {
             const el = document.getElementById(id);
-            if (el) el.innerHTML = `<option value="" disabled selected>เลือก...</option>` + arr.map(i => `<option value="${i}">${i}</option>`).join('');
+            if (el) {
+                const currentVal = el.value; // รักษาค่าเดิมที่เคยเลือกไว้
+                el.innerHTML = `<option value="" disabled ${!currentVal ? 'selected' : ''}>เลือก...</option>` 
+                             + arr.map(i => `<option value="${i}" ${currentVal === i ? 'selected' : ''}>${i}</option>`).join('')
+                             + `<option value="ADD_NEW" class="text-primary fw-bold" style="background-color: #e9ecef;">+ เพิ่มรายการใหม่...</option>`;
+            }
         };
-        populate('inp-construction-area', listData.constructionAreas);
-        populate('inp-area', listData.areas);
-        populate('inp-room', listData.rooms);
-        populate('inp-guest', listData.guestImpacts);
-        populate('inp-severity', listData.severities);
+        populate('inp-construction-area', listData.constructionAreas, 'constructionAreas');
+        populate('inp-area', listData.areas, 'areas');
+        populate('inp-room', listData.rooms, 'rooms');
+        populate('inp-guest', listData.guestImpacts, 'guestImpacts');
+        populate('inp-severity', listData.severities, 'severities');
         
+        // รักษาสถานะ Checkbox ก่อน render ใหม่
+        const checkedImpacts = Array.from(document.querySelectorAll('.impact-cb:checked')).map(cb => cb.value);
         document.getElementById('impact-checks').innerHTML = listData.impactTypes.map(item => `
-            <div class="form-check form-check-inline">
-                <input class="form-check-input impact-cb" type="checkbox" value="${item}"> <label class="form-check-label">${item}</label>
-            </div>`).join('');
+            <div class="form-check form-check-inline mb-2">
+                <input class="form-check-input impact-cb" type="checkbox" value="${item}" ${checkedImpacts.includes(item) ? 'checked' : ''}> 
+                <label class="form-check-label">${item}</label>
+            </div>`).join('') + `
+            <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 mt-1 align-self-start text-nowrap" onclick="addNewImpactType()"><i class="fa fa-plus"></i> เพิ่มตัวเลือก</button>`;
     }
 
     function showSection(id) {
@@ -409,7 +472,6 @@
         const navEl = document.getElementById('nav-' + id);
         if(navEl) navEl.classList.add('active');
 
-        // ปิด Sidebar อัตโนมัติเมื่ออยู่บนมือถือ แล้วกดเลือกเมนู
         if(window.innerWidth <= 768) {
             document.getElementById('sidebar').classList.remove('show');
             document.getElementById('sidebar-overlay').classList.remove('show');
@@ -446,15 +508,16 @@
         });
 
         let criticalCount = 0, totalLoss = 0, complaintCount = 0;
-        const impactCounts = {}, severityCounts = { '1':0, '2':0, '3':0, '4':0, '5':0 };
+        const impactCounts = {}, severityCounts = {};
 
         filtered.forEach(row => {
             const impactStr = row[5] || "", severity = row[6] || "", guestImp = row[9] || "", damage = parseFloat(row[13]) || 0; 
             if (severity.startsWith('4') || severity.startsWith('5')) criticalCount++;
             if (guestImp !== 'ไม่มีแขกร้องเรียน' && guestImp !== 'ไม่มี' && guestImp !== '') complaintCount++;
             totalLoss += damage;
+            
             if (severity) {
-                let sevKey = severity.charAt(0);
+                let sevKey = severity.charAt(0); // จัดกลุ่มจากตัวเลขนำหน้าเพื่อให้รวมกลุ่มได้
                 severityCounts[sevKey] = (severityCounts[sevKey] || 0) + 1;
             }
             impactStr.split(',').map(s => s.trim()).forEach(imp => { if(imp) impactCounts[imp] = (impactCounts[imp] || 0) + 1; });
@@ -477,26 +540,29 @@
             data: { labels: Object.keys(dataObj), datasets: [{ label: 'จำนวนครั้งที่พบ', data: Object.values(dataObj), backgroundColor: '#3498db', borderRadius: 5 }] },
             options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: {stepSize: 1} } } }
         });
-        // ปรับให้กราฟมีความสูงเหมาะสมบนมือถือ
         if(window.innerWidth <= 768) { document.getElementById('chartImpact').style.height = "250px"; }
     }
 
     function drawSeverityChart(dataObj) {
         const ctx = document.getElementById('chartSeverity').getContext('2d');
         if(chartInstanceSeverity) chartInstanceSeverity.destroy();
-        const bgColors = ['#2ecc71', '#f1c40f', '#e67e22', '#e74c3c', '#8e44ad'];
-        const labels = ['Lv 1', 'Lv 2', 'Lv 3', 'Lv 4', 'Lv 5'];
-        const values = [dataObj['1']||0, dataObj['2']||0, dataObj['3']||0, dataObj['4']||0, dataObj['5']||0];
+        
+        // ทำให้สีรองรับการเพิ่มระดับความรุนแรงใหม่ๆ ได้
+        const bgColors = ['#2ecc71', '#f1c40f', '#e67e22', '#e74c3c', '#8e44ad', '#34495e', '#95a5a6'];
+        const labels = Object.keys(dataObj).map(k => `Lv ${k}`);
+        const values = Object.values(dataObj);
+        let colors = labels.map((_, i) => bgColors[i % bgColors.length]);
+
         chartInstanceSeverity = new Chart(ctx, {
             type: 'doughnut',
-            data: { labels: labels, datasets: [{ data: values, backgroundColor: bgColors }] },
+            data: { labels: labels, datasets: [{ data: values, backgroundColor: colors }] },
             options: { responsive: true, maintainAspectRatio: false, cutout: '60%' }
         });
         if(window.innerWidth <= 768) { document.getElementById('chartSeverity').style.height = "250px"; }
     }
 
     // ==========================================
-    // MEDIA UPLOAD LOGIC (IMAGE + VIDEO)
+    // MEDIA UPLOAD LOGIC
     // ==========================================
     async function previewFiles(input) {
         const files = input.files;
@@ -685,15 +751,35 @@
         
         if(document.getElementById('inp-start-datetime')._flatpickr) document.getElementById('inp-start-datetime')._flatpickr.setDate(record[3]);
         
-        document.getElementById('inp-construction-area').value = record[15] || "";
-        document.getElementById('inp-area').value = record[7] || "";
-        document.getElementById('inp-room').value = record[8] || "";
-        document.getElementById('inp-guest').value = record[9] || "";
+        // ลองเทียบค่าที่ถูกเซฟไว้กับค่าใน dropdown ว่าตรงกันไหม (หากตรงให้ set หากไม่ให้เพิ่มใหม่เข้า local)
+        const setSelectValue = (elementId, value, category) => {
+            const el = document.getElementById(elementId);
+            if (value && !listData[category].includes(value)) {
+                listData[category].push(value);
+                renderLists();
+            }
+            if(el) el.value = value;
+        };
+
+        setSelectValue('inp-construction-area', record[15] || "", 'constructionAreas');
+        setSelectValue('inp-area', record[7] || "", 'areas');
+        setSelectValue('inp-room', record[8] || "", 'rooms');
+        setSelectValue('inp-guest', record[9] || "", 'guestImpacts');
+        
+        // สำหรับ Severity จะมีการดึงข้อความมาแสดง
+        const sevVal = record[6] || "";
+        const matchSev = listData.severities.find(s => s.startsWith(sevVal));
+        setSelectValue('inp-severity', matchSev || sevVal, 'severities');
         
         const impacts = (record[5] || "").split(',').map(s=>s.trim());
+        impacts.forEach(imp => {
+            if(imp && !listData.impactTypes.includes(imp)) {
+                listData.impactTypes.push(imp);
+                renderLists();
+            }
+        });
         document.querySelectorAll('.impact-cb').forEach(cb => { if(impacts.includes(cb.value)) cb.checked = true; });
 
-        document.getElementById('inp-severity').value = record[6] || "";
         document.getElementById('inp-details').value = record[10] || "";
         document.getElementById('inp-action').value = record[12] || "";
         document.getElementById('inp-damage').value = record[13] || 0;
