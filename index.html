@@ -150,25 +150,25 @@
                     </div>
                     <div class="row g-3">
                         <div class="col-md-4">
-                            <div class="card p-3 shadow-sm h-100">
+                            <div class="card p-3 shadow-sm">
                                 <h6 class="text-center text-muted mb-3">พื้นที่ก่อสร้าง <small class="text-primary" style="cursor:pointer;" title="คลิกที่กราฟเพื่อดูรายการ">(คลิกดูรายละเอียด)</small></h6>
-                                <div style="position: relative; height: 300px; width: 100%;">
+                                <div style="position: relative; height: 260px; width: 100%;">
                                     <canvas id="chartConstArea" style="cursor: pointer;"></canvas>
                                 </div>
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <div class="card p-3 shadow-sm h-100">
+                            <div class="card p-3 shadow-sm">
                                 <h6 class="text-center text-muted mb-3">แนวโน้มประเภทผลกระทบที่พบ</h6>
-                                <div style="position: relative; height: 300px; width: 100%;">
+                                <div style="position: relative; height: 260px; width: 100%;">
                                     <canvas id="chartImpact"></canvas>
                                 </div>
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <div class="card p-3 shadow-sm h-100">
+                            <div class="card p-3 shadow-sm">
                                 <h6 class="text-center text-muted mb-3">สัดส่วนระดับความรุนแรง</h6>
-                                <div style="position: relative; height: 300px; width: 100%;">
+                                <div style="position: relative; height: 260px; width: 100%;">
                                     <canvas id="chartSeverity"></canvas>
                                 </div>
                             </div>
@@ -541,20 +541,13 @@
     // DASHBOARD LOGIC
     // ==========================================
     function renderDashboard() {
-        if(allData.length <= 1) {
-            document.getElementById('stat-total').innerText = "0";
-            document.getElementById('stat-critical').innerText = "0";
-            document.getElementById('stat-loss').innerText = "฿0";
-            document.getElementById('stat-complaint').innerText = "0";
-            return;
-        }
-
         const startEl = document.getElementById('dateStart');
         const endEl = document.getElementById('dateEnd');
         const startDate = (startEl && startEl.value) ? startEl.value : "1900-01-01";
         const endDate = (endEl && endEl.value) ? endEl.value : "2100-01-01";
         
-        const dataRows = allData.slice(1);
+        // แม้ไม่มีข้อมูลก็ให้แสดงกราฟเป็น 0
+        const dataRows = allData.length > 1 ? allData.slice(1) : [];
         
         let filtered = dataRows.filter(row => {
             const rowDate = row[2] || "";
@@ -562,7 +555,22 @@
         });
 
         let criticalCount = 0, totalLoss = 0, complaintCount = 0;
-        const impactCounts = {}, severityCounts = {}, constAreaCounts = {};
+        
+        // ----------------------------------------------------
+        // เตรียมค่าเริ่มต้นให้เป็น 0 ทุกรายการจากข้อมูลที่ตั้งค่าไว้
+        // ----------------------------------------------------
+        const impactCounts = {};
+        listData.impactTypes.forEach(type => impactCounts[type] = 0);
+        
+        const severityCounts = {};
+        listData.severities.forEach(sev => {
+            let sevKey = sev.charAt(0);
+            if(sevKey) severityCounts[sevKey] = 0;
+        });
+
+        const constAreaCounts = {};
+        listData.constructionAreas.forEach(area => constAreaCounts[area] = 0);
+        // ----------------------------------------------------
 
         filtered.forEach(row => {
             const impactStr = row[5] || "", severity = row[6] || "", guestImp = row[9] || "", damage = parseFloat(row[13]) || 0; 
@@ -576,9 +584,13 @@
                 let sevKey = severity.charAt(0); // จัดกลุ่มจากตัวเลขนำหน้าเพื่อให้รวมกลุ่มได้
                 severityCounts[sevKey] = (severityCounts[sevKey] || 0) + 1;
             }
-            impactStr.split(',').map(s => s.trim()).forEach(imp => { if(imp) impactCounts[imp] = (impactCounts[imp] || 0) + 1; });
+            impactStr.split(',').map(s => s.trim()).forEach(imp => { 
+                if(imp) impactCounts[imp] = (impactCounts[imp] || 0) + 1; 
+            });
             
-            constAreaCounts[constArea] = (constAreaCounts[constArea] || 0) + 1;
+            if (constArea) {
+                constAreaCounts[constArea] = (constAreaCounts[constArea] || 0) + 1;
+            }
         });
 
         document.getElementById('stat-total').innerText = filtered.length;
