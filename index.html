@@ -173,8 +173,9 @@
                                     <div class="col-md-6"><label class="form-label">วันที่และเวลาเริ่มเกิดเหตุ <span class="text-danger">*</span></label><input type="text" name="startDateTime" id="inp-start-datetime" class="form-control bg-white" required></div>
                                     <div class="col-md-6"><label class="form-label">วันที่และเวลาสิ้นสุด</label><input type="text" name="endDateTime" id="inp-end-datetime" class="form-control bg-white"></div>
                                     
-                                    <div class="col-md-6"><label class="form-label">พื้นที่/โซนที่กระทบ</label><select name="area" id="inp-area" class="form-select"></select></div>
-                                    <div class="col-md-6"><label class="form-label">เลขห้อง / จำนวนห้อง</label><input type="text" name="roomNo" id="inp-room" class="form-control"></div>
+                                    <div class="col-md-4"><label class="form-label">พื้นที่ก่อสร้าง (แหล่งกำเนิด)</label><select name="constructionArea" id="inp-construction-area" class="form-select"></select></div>
+                                    <div class="col-md-4"><label class="form-label">พื้นที่/โซนที่กระทบ</label><select name="area" id="inp-area" class="form-select"></select></div>
+                                    <div class="col-md-4"><label class="form-label">เลขห้อง / จำนวนห้อง</label><select name="roomNo" id="inp-room" class="form-select"></select></div>
 
                                     <div class="col-md-8">
                                         <label class="form-label">ประเภทผลกระทบ</label>
@@ -229,7 +230,7 @@
                     <div class="table-responsive shadow-sm">
                         <table class="table table-hover align-middle bg-white mb-0" style="min-width: 600px;">
                             <thead class="table-light">
-                                <tr><th>เวลาเริ่ม</th><th>ผลกระทบ</th><th>ระดับ</th><th>สถานที่</th><th>ผู้บันทึก</th><th>ไฟล์แนบ</th><th>จัดการ</th></tr>
+                                <tr><th>เวลาเริ่ม</th><th>พื้นที่ก่อสร้าง</th><th>ผลกระทบ</th><th>ระดับ</th><th>สถานที่/ห้อง</th><th>ผู้บันทึก</th><th>ไฟล์แนบ</th><th>จัดการ</th></tr>
                             </thead>
                             <tbody id="history-tbody"></tbody>
                         </table>
@@ -242,7 +243,9 @@
                         <div class="card-header bg-secondary text-white p-3 rounded-top"><h5 class="m-0"><i class="fa fa-cog me-2"></i> จัดการตัวเลือก</h5></div>
                         <div class="card-body p-3 p-md-4">
                             <select id="setting-category" class="form-select mb-3" onchange="renderSettingsTable()">
-                                <option value="areas">พื้นที่/โซน</option>
+                                <option value="constructionAreas">พื้นที่ก่อสร้าง (แหล่งกำเนิด)</option>
+                                <option value="areas">พื้นที่/โซนที่กระทบ</option>
+                                <option value="rooms">เลขห้อง / จำนวนห้อง</option>
                                 <option value="impactTypes">ประเภทผลกระทบ</option>
                                 <option value="severities">ระดับความรุนแรง</option>
                                 <option value="guestImpacts">ผลกระทบต่อแขก</option>
@@ -296,7 +299,7 @@
     // FRONTEND VARIABLES
     // ==========================================
     let allData = [];
-    let listData = { areas: ["Lobby"], impactTypes: ["เสียงดัง"], severities: ["1"], guestImpacts: ["ไม่มี"] };
+    let listData = { constructionAreas: ["โซนก่อสร้างหลัก"], areas: ["Lobby"], rooms: ["-"], impactTypes: ["เสียงดัง"], severities: ["1"], guestImpacts: ["ไม่มี"] };
     let tempListData = {}; 
     let uploadedMedia = [];
     let chartInstanceImpact = null, chartInstanceSeverity = null;
@@ -384,9 +387,11 @@
     function renderLists() {
         const populate = (id, arr) => {
             const el = document.getElementById(id);
-            el.innerHTML = `<option value="" disabled selected>เลือก...</option>` + arr.map(i => `<option value="${i}">${i}</option>`).join('');
+            if (el) el.innerHTML = `<option value="" disabled selected>เลือก...</option>` + arr.map(i => `<option value="${i}">${i}</option>`).join('');
         };
+        populate('inp-construction-area', listData.constructionAreas);
         populate('inp-area', listData.areas);
+        populate('inp-room', listData.rooms);
         populate('inp-guest', listData.guestImpacts);
         populate('inp-severity', listData.severities);
         
@@ -637,6 +642,8 @@
 
         records.forEach((row) => {
             const id = row[0], startDT = row[3] || '', impact = row[5], severity = row[6] || "", area = row[7]; 
+            const roomNo = row[8] || "";
+            const constArea = row[15] || "-";
             const urls = parseMediaUrls(row[14]);
             
             let mediaHtml = '-';
@@ -652,11 +659,16 @@
                 mediaHtml += '</div>';
             }
 
+            let locationText = area;
+            if (roomNo && roomNo !== "-") locationText += ` <small class="text-muted">(ห้อง: ${roomNo})</small>`;
+
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td>${startDT}</td><td><small>${impact}</small></td>
+                <td>${startDT}</td>
+                <td>${constArea}</td>
+                <td><small>${impact}</small></td>
                 <td><span class="badge ${severity.startsWith('4') || severity.startsWith('5') ? 'bg-danger' : (severity.startsWith('3') ? 'bg-warning text-dark' : 'bg-success')}">Lv.${severity.charAt(0)}</span></td>
-                <td>${area}</td><td>${row[11]}</td>
+                <td>${locationText}</td><td>${row[11]}</td>
                 <td>${mediaHtml}</td>
                 <td><button class="btn btn-sm btn-outline-primary text-nowrap" onclick="editRecord('${id}')"><i class="fa fa-edit"></i> แก้ไข</button></td>
             `;
@@ -672,8 +684,20 @@
         document.getElementById('btn-delete').style.display = 'inline-block';
         
         if(document.getElementById('inp-start-datetime')._flatpickr) document.getElementById('inp-start-datetime')._flatpickr.setDate(record[3]);
-        document.getElementById('inp-severity').value = record[6];
-        document.getElementById('inp-details').value = record[10];
+        
+        document.getElementById('inp-construction-area').value = record[15] || "";
+        document.getElementById('inp-area').value = record[7] || "";
+        document.getElementById('inp-room').value = record[8] || "";
+        document.getElementById('inp-guest').value = record[9] || "";
+        
+        const impacts = (record[5] || "").split(',').map(s=>s.trim());
+        document.querySelectorAll('.impact-cb').forEach(cb => { if(impacts.includes(cb.value)) cb.checked = true; });
+
+        document.getElementById('inp-severity').value = record[6] || "";
+        document.getElementById('inp-details').value = record[10] || "";
+        document.getElementById('inp-action').value = record[12] || "";
+        document.getElementById('inp-damage').value = record[13] || 0;
+        document.getElementById('inp-recorder').value = record[11] || "";
         
         document.getElementById('existingImages').value = record[14] || "";
         showSection('form');
