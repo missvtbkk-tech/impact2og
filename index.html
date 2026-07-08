@@ -44,8 +44,6 @@
         #login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #1a252f 0%, #3498db 100%); padding: 20px; }
         .login-card { background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); width: 100%; max-width: 400px; }
 
-        .api-config-badge { position: fixed; bottom: 10px; right: 10px; background: rgba(0,0,0,0.8); color: #fff; padding: 8px 15px; border-radius: 20px; font-size: 12px; z-index: 1030; cursor: pointer; }
-
         /* Overlay for mobile sidebar */
         #sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 1035; transition: 0.3s; opacity: 0; }
         #sidebar-overlay.show { display: block; opacity: 1; }
@@ -65,8 +63,6 @@
     </style>
 </head>
 <body>
-
-<div class="api-config-badge" onclick="configureAPI()"><i class="fa fa-link"></i> ตั้งค่า API URL (สำหรับ GitHub Pages)</div>
 
 <div id="loading">
     <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status"></div>
@@ -273,34 +269,13 @@
     // ==========================================
     // API CONFIGURATION (สำหรับใช้งานบน GitHub Pages)
     // ==========================================
-    let GAS_API_URL = localStorage.getItem("GAS_API_URL") || ""; 
-
-    function configureAPI() {
-        Swal.fire({
-            title: 'ตั้งค่าการเชื่อมต่อ API',
-            text: 'วาง URL ของ Google Apps Script Web App ที่นี่ (จบด้วย /exec)',
-            input: 'text',
-            inputValue: GAS_API_URL,
-            showCancelButton: true,
-            confirmButtonText: 'บันทึก',
-        }).then((result) => {
-            if (result.isConfirmed) {
-                GAS_API_URL = result.value.trim();
-                localStorage.setItem("GAS_API_URL", GAS_API_URL);
-                Swal.fire('สำเร็จ', 'บันทึก URL แล้ว กรุณารีเฟรชหน้าเว็บ', 'success');
-            }
-        });
-    }
+    // กำหนด URL ของ Google Apps Script ของคุณโดยตรง
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxG4pPXyReanLhgIiQGWhHYdINHHC-1IcW53EkERrZtK4_UFFVjvLdZksqVA2tGFKaN0A/exec"; 
 
     // ==========================================
-    // CORE API CALLER (ทดแทน google.script.run)
+    // CORE API CALLER (เชื่อมต่อ Backend)
     // ==========================================
     async function callBackend(action, payload = {}) {
-        if (!GAS_API_URL) {
-            console.warn("No GAS_API_URL set. Using Mock Data.");
-            return mockBackendResponse(action, payload);
-        }
-
         try {
             payload.action = action;
             const response = await fetch(GAS_API_URL, {
@@ -329,9 +304,6 @@
 
     window.onload = () => {
         setupDatePickers();
-        if(!GAS_API_URL) {
-            Swal.fire('โหมดทดสอบ', 'ระบบกำลังจำลองการทำงาน เนื่องจากยังไม่ได้ตั้งค่า API URL', 'info');
-        }
     };
 
     function setupDatePickers() {
@@ -789,18 +761,6 @@
             Swal.fire('ข้อผิดพลาด', error.toString(), 'error');
             document.getElementById('loading').style.display = 'none';
         }
-    }
-
-    // --- MOCK BACKEND (Fallback for GitHub testing without API) ---
-    function mockBackendResponse(action, payload) {
-        return new Promise(resolve => {
-            setTimeout(() => {
-                if(action === 'verifyAdmin') resolve(payload.password === 'admin');
-                else if(action === 'getFullData') resolve({ records: [["ID"], ["mock-1", "Date", "Date", "2023-10-01 10:00", "", "เสียงดัง", "3 - แขกร้องเรียน", "Lobby", "", "บ่น", "Test", "Admin", "", 0, ""]], lists: listData });
-                else if(action === 'saveRecord') resolve("Success");
-                else resolve("Success");
-            }, 500);
-        });
     }
 </script>
 </body>
