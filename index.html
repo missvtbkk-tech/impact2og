@@ -381,6 +381,7 @@
             if(targetSection === 'history') renderHistory();
             if(targetSection === 'dashboard') renderDashboard();
             if(targetSection === 'settings') renderSettings();
+            if(targetSection === 'form') resetForm();
         } catch(e) {
             Swal.fire('Error', e.toString(), 'error');
         } finally {
@@ -689,6 +690,9 @@
         document.getElementById('existing-preview-container').innerHTML = '';
         document.getElementById('existing-preview-container').style.display = 'none';
         clearImages();
+        
+        // เซ็ตค่าผู้บันทึกให้เป็นผู้ใช้งานปัจจุบันโดยอัตโนมัติ
+        document.getElementById('inp-recorder').value = currentUser;
     }
 
     // ==========================================
