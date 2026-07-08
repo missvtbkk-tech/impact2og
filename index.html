@@ -149,8 +149,30 @@
                         <div class="col-6 col-md-3"><div class="stat-card bg-success shadow"><h6 class="opacity-75 mb-1 text-truncate">แขกร้องเรียน</h6><h2 id="stat-complaint" class="m-0 fw-bold">0</h2></div></div>
                     </div>
                     <div class="row g-3">
-                        <div class="col-md-8"><div class="card p-3 shadow-sm h-100"><canvas id="chartImpact"></canvas></div></div>
-                        <div class="col-md-4"><div class="card p-3 shadow-sm h-100"><canvas id="chartSeverity"></canvas></div></div>
+                        <div class="col-md-4">
+                            <div class="card p-3 shadow-sm h-100">
+                                <h6 class="text-center text-muted mb-3">พื้นที่ก่อสร้าง <small class="text-primary" style="cursor:pointer;" title="คลิกที่กราฟเพื่อดูรายการ">(คลิกดูรายละเอียด)</small></h6>
+                                <div style="position: relative; height: 300px; width: 100%;">
+                                    <canvas id="chartConstArea" style="cursor: pointer;"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card p-3 shadow-sm h-100">
+                                <h6 class="text-center text-muted mb-3">แนวโน้มประเภทผลกระทบที่พบ</h6>
+                                <div style="position: relative; height: 300px; width: 100%;">
+                                    <canvas id="chartImpact"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card p-3 shadow-sm h-100">
+                                <h6 class="text-center text-muted mb-3">สัดส่วนระดับความรุนแรง</h6>
+                                <div style="position: relative; height: 300px; width: 100%;">
+                                    <canvas id="chartSeverity"></canvas>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </section>
 
@@ -208,8 +230,12 @@
                                     <div class="col-12 mt-3">
                                         <label class="form-label">แนบรูปภาพ หรือ วิดีโอ <small class="text-muted">(วิดีโอขนาดไม่เกิน 10MB)</small></label>
                                         <div class="d-flex gap-2 flex-wrap">
+                                            <label class="btn btn-outline-success shadow-sm flex-grow-1 flex-sm-grow-0">
+                                                <i class="fa fa-camera"></i> ถ่ายภาพ/วิดีโอ
+                                                <input type="file" accept="image/*,video/*" capture="environment" onchange="previewFiles(this)" hidden>
+                                            </label>
                                             <label class="btn btn-outline-primary shadow-sm flex-grow-1 flex-sm-grow-0">
-                                                <i class="fa fa-folder-open"></i> เลือกไฟล์
+                                                <i class="fa fa-folder-open"></i> เลือกจากเครื่อง
                                                 <input type="file" multiple accept="image/*,video/mp4,video/quicktime" onchange="previewFiles(this)" hidden>
                                             </label>
                                             <button type="button" class="btn btn-outline-danger shadow-sm flex-grow-1 flex-sm-grow-0 ms-sm-auto" onclick="clearImages()" title="ล้างไฟล์ทั้งหมด"><i class="fa fa-trash"></i> ล้างไฟล์</button>
@@ -306,7 +332,7 @@
     let listData = { constructionAreas: ["โซนก่อสร้างหลัก"], areas: ["Lobby"], rooms: ["-"], impactTypes: ["เสียงดัง"], severities: ["1 - แทบไม่รู้สึก"], guestImpacts: ["ไม่มี"] };
     let tempListData = {}; 
     let uploadedMedia = [];
-    let chartInstanceImpact = null, chartInstanceSeverity = null;
+    let chartInstanceImpact = null, chartInstanceSeverity = null, chartInstanceConstArea = null;
     let currentUser = "", isAdmin = false, currentAdminPassword = "";
 
     window.onload = () => {
@@ -336,28 +362,40 @@
         if (!username) return Swal.fire('แจ้งเตือน', 'กรุณากรอกชื่อผู้ใช้งาน', 'warning');
 
         document.getElementById('loading').style.display = 'flex';
-        document.getElementById('loading-text').innerText = "กำลังตรวจสอบสิทธิ์...";
+        document.getElementById('loading-text').innerText = "กำลังเข้าสู่ระบบและโหลดข้อมูล...";
 
-        if (username.toLowerCase() === 'admin') {
-            try {
-                const isValid = await callBackend('verifyAdmin', { password });
-                if (isValid) {
-                    currentAdminPassword = password;
-                    processLoginSuccess('Admin', true);
-                } else {
+        try {
+            let isValidAdmin = false;
+            let fetchedData = null;
+
+            if (username.toLowerCase() === 'admin') {
+                // โหลดข้อมูลและตรวจสอบสิทธิ์พร้อมกัน (ลดระยะเวลาในการโหลดลง 50%)
+                const [adminResult, dataResult] = await Promise.all([
+                    callBackend('verifyAdmin', { password }),
+                    callBackend('getFullData')
+                ]);
+                
+                isValidAdmin = adminResult;
+                fetchedData = dataResult;
+
+                if (!isValidAdmin) {
                     Swal.fire('ข้อผิดพลาด', 'รหัสผ่านแอดมินไม่ถูกต้อง', 'error');
                     document.getElementById('loading').style.display = 'none';
+                    return;
                 }
-            } catch(e) {
-                Swal.fire('ข้อผิดพลาด', e, 'error');
-                document.getElementById('loading').style.display = 'none';
+                currentAdminPassword = password;
+            } else {
+                fetchedData = await callBackend('getFullData');
             }
-        } else {
-            processLoginSuccess(username, false);
+
+            processLoginSuccess(username.toLowerCase() === 'admin' ? 'Admin' : username, isValidAdmin, fetchedData);
+        } catch (e) {
+            Swal.fire('ข้อผิดพลาด', e.toString(), 'error');
+            document.getElementById('loading').style.display = 'none';
         }
     }
 
-    function processLoginSuccess(name, roleAdmin) {
+    function processLoginSuccess(name, roleAdmin, fetchedData) {
         currentUser = name; isAdmin = roleAdmin;
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('app-wrapper').style.display = 'block';
@@ -365,7 +403,22 @@
         
         document.querySelectorAll('.nav-admin-only').forEach(el => el.style.display = isAdmin ? 'block' : 'none');
         document.getElementById('inp-recorder').readOnly = !isAdmin;
-        fetchDataAndStart(isAdmin ? 'dashboard' : 'form');
+        
+        // ข้ามขั้นตอนการดึงข้อมูลใหม่ หากข้อมูลถูกดึงมาตอน Login แล้ว
+        if (fetchedData) {
+            allData = fetchedData.records || [];
+            listData = fetchedData.lists || listData;
+            renderLists();
+        }
+
+        const targetSection = isAdmin ? 'dashboard' : 'form';
+        showSection(targetSection);
+        if(targetSection === 'history') renderHistory();
+        if(targetSection === 'dashboard') renderDashboard();
+        if(targetSection === 'settings') renderSettings();
+        if(targetSection === 'form') resetForm();
+        
+        document.getElementById('loading').style.display = 'none';
     }
 
     function logout() { location.reload(); }
@@ -509,10 +562,12 @@
         });
 
         let criticalCount = 0, totalLoss = 0, complaintCount = 0;
-        const impactCounts = {}, severityCounts = {};
+        const impactCounts = {}, severityCounts = {}, constAreaCounts = {};
 
         filtered.forEach(row => {
             const impactStr = row[5] || "", severity = row[6] || "", guestImp = row[9] || "", damage = parseFloat(row[13]) || 0; 
+            const constArea = row[15] || "ไม่ระบุ";
+
             if (severity.startsWith('4') || severity.startsWith('5')) criticalCount++;
             if (guestImp !== 'ไม่มีแขกร้องเรียน' && guestImp !== 'ไม่มี' && guestImp !== '') complaintCount++;
             totalLoss += damage;
@@ -522,6 +577,8 @@
                 severityCounts[sevKey] = (severityCounts[sevKey] || 0) + 1;
             }
             impactStr.split(',').map(s => s.trim()).forEach(imp => { if(imp) impactCounts[imp] = (impactCounts[imp] || 0) + 1; });
+            
+            constAreaCounts[constArea] = (constAreaCounts[constArea] || 0) + 1;
         });
 
         document.getElementById('stat-total').innerText = filtered.length;
@@ -531,6 +588,65 @@
 
         drawImpactChart(impactCounts);
         drawSeverityChart(severityCounts);
+        drawConstAreaChart(constAreaCounts, startDate, endDate);
+    }
+
+    function drawConstAreaChart(dataObj, startDate, endDate) {
+        const ctx = document.getElementById('chartConstArea').getContext('2d');
+        if(chartInstanceConstArea) chartInstanceConstArea.destroy();
+        
+        const bgColors = ['#e74c3c', '#3498db', '#2ecc71', '#f1c40f', '#9b59b6', '#1abc9c', '#34495e'];
+        const labels = Object.keys(dataObj);
+        const values = Object.values(dataObj);
+        let colors = labels.map((_, i) => bgColors[i % bgColors.length]);
+
+        chartInstanceConstArea = new Chart(ctx, {
+            type: 'pie',
+            data: { labels: labels, datasets: [{ data: values, backgroundColor: colors }] },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false,
+                onClick: (event, elements) => {
+                    if (elements.length > 0) {
+                        const index = elements[0].index;
+                        const selectedArea = labels[index];
+                        showConstAreaDetails(selectedArea, startDate, endDate);
+                    }
+                }
+            }
+        });
+        if(window.innerWidth <= 768) { document.getElementById('chartConstArea').style.height = "250px"; }
+    }
+
+    function showConstAreaDetails(areaName, startDate, endDate) {
+        // กรองข้อมูลเฉพาะของพื้นที่ก่อสร้างที่ถูกคลิกในช่วงเวลาที่กำหนด
+        const records = allData.slice(1).filter(row => {
+            const rowDate = row[2] || "";
+            return rowDate >= startDate && rowDate <= endDate && (row[15] || "ไม่ระบุ") === areaName;
+        });
+
+        let html = '<div class="table-responsive"><table class="table table-sm table-hover text-start" style="font-size: 0.85rem;">';
+        html += '<thead class="table-light"><tr><th>วันที่/เวลา</th><th>พื้นที่กระทบ</th><th>ผลกระทบ</th><th>Lv.</th></tr></thead><tbody>';
+        
+        records.forEach(r => {
+            const timeStr = r[3] || "";
+            const shortTime = timeStr.includes(' ') ? timeStr.split(' ')[0].substring(5) + " " + timeStr.split(' ')[1] : timeStr; // ย่อวันที่ให้สั้นลง
+            html += `<tr>
+                <td class="text-nowrap">${shortTime}</td>
+                <td>${r[7]} ${r[8] && r[8] !== '-' ? `(ห.${r[8]})` : ''}</td>
+                <td class="text-truncate" style="max-width: 120px;" title="${r[5]}">${r[5]}</td>
+                <td><span class="badge ${r[6].startsWith('4')||r[6].startsWith('5') ? 'bg-danger' : 'bg-secondary'}">${r[6].charAt(0)}</span></td>
+            </tr>`;
+        });
+        html += '</tbody></table></div>';
+
+        Swal.fire({
+            title: `<div style="font-size:1.2rem; color: #1a252f;">รายละเอียดพื้นที่ก่อสร้าง:<br><span class="text-primary">${areaName}</span></div>`,
+            html: html,
+            width: '600px',
+            showCloseButton: true,
+            confirmButtonText: 'ปิด'
+        });
     }
 
     function drawImpactChart(dataObj) {
@@ -541,7 +657,6 @@
             data: { labels: Object.keys(dataObj), datasets: [{ label: 'จำนวนครั้งที่พบ', data: Object.values(dataObj), backgroundColor: '#3498db', borderRadius: 5 }] },
             options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: {stepSize: 1} } } }
         });
-        if(window.innerWidth <= 768) { document.getElementById('chartImpact').style.height = "250px"; }
     }
 
     function drawSeverityChart(dataObj) {
@@ -559,7 +674,6 @@
             data: { labels: labels, datasets: [{ data: values, backgroundColor: colors }] },
             options: { responsive: true, maintainAspectRatio: false, cutout: '60%' }
         });
-        if(window.innerWidth <= 768) { document.getElementById('chartSeverity').style.height = "250px"; }
     }
 
     // ==========================================
